@@ -1,0 +1,120 @@
+service: serverless-fastapi-scheduler-template
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.11
+  architecture: arm64
+  region: ${env:AWS_REGION, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 15
+  logRetentionInDays: 14
+  environment:
+    STAGE: ${self:provider.stage}
+    API_BASE_PATH: ${env:API_BASE_PATH, ''}
+    ROOT_PATH: ${env:ROOT_PATH, ''}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+package:
+  individually: true
+  patterns:
+    - '!tests/**'
+    - '!**/__pycache__/**'
+    - '!**/*.pyc'
+    - '!node_modules/**'
+    - '!package.json'
+    - '!package-lock.json'
+
+plugins:
+  - serverless-python-requirements
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3002
+  pythonRequirements:
+    slim: true
+    strip: false
+    useStaticCache: true
+    useDownloadCache: true
+    dockerizePip: true
+
+functions:
+  api:
+    handler: src/handlers/http_handler.handler
+    package:
+      patterns:
+        - 'src/**'
+        - '!src/tasks/**'
+    events:
+      - httpApi:
+          method: ANY
+          path: /{proxy+}
+
+  nightlyCleanupUtc:
+    handler: src/handlers/task_handlers.nightly_handler_utc
+    description: Nightly cleanup at 02:00 UTC
+    package:
+      patterns:
+        - 'src/**'
+        - '!src/app/**'
+    events:
+      - schedule:
+          rate: cron(0 2 * * ? *)
+          enabled: ${env:ENABLE_SCHEDULES, 'true'}
+
+  syncThingsUtc:
+    handler: src/handlers/task_handlers.sync_handler_utc
+    description: Sync every 1 minutes
+    package:
+      patterns:
+        - 'src/**'
+        - '!src/app/**'
+    events:
+      - schedule:
+          rate: rate(1 minutes)
+          enabled: ${env:ENABLE_SCHEDULES, 'true'}
+
+resources:
+  Resources:
+    NightlyCleanupUtcDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: !Sub "${self:service}-${self:provider.stage}-nightly-utc-dlq"
+        MessageRetentionPeriod: 1209600
+
+    SyncThingsUtcDlq:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: !Sub "${self:service}-${self:provider.stage}-sync-utc-dlq"
+        MessageRetentionPeriod: 1209600
+
+    NightlyCleanupUtcInvokeConfig:
+      Type: AWS::Lambda::EventInvokeConfig
+      Properties:
+        FunctionName: !Sub "${self:service}-${self:provider.stage}-nightlyCleanupUtc"
+        Qualifier: "$LATEST"
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Destination: !GetAtt NightlyCleanupUtcDlq.Arn
+
+    SyncThingsUtcInvokeConfig:
+      Type: AWS::Lambda::EventInvokeConfig
+      Properties:
+        FunctionName: !Sub "${self:service}-${self:provider.stage}-syncThingsUtc"
+        Qualifier: "$LATEST"
+        MaximumRetryAttempts: 2
+        DestinationConfig:
+          OnFailure:
+            Destination: !GetAtt SyncThingsUtcDlq.Arn
