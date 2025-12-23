@@ -43,7 +43,6 @@ package:
     - '!*.md'
     - '!.env*'
     - '!Makefile'
-    - '!pyproject.toml'
     - '!requirements-dev.txt'
 
 custom:
