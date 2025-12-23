@@ -48,8 +48,10 @@ package:
     - '!.mypy_cache/**'
     - '!*.md'
     - '!.env*'
+    - '!pyproject.toml'
+    - '!uv.lock'
+    - '!.python-version'
     - '!Makefile'
-    - '!requirements-dev.txt'
 
 custom:
   stages:

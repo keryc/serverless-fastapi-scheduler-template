@@ -1,6 +1,6 @@
+from src.app.services.sample_service import compute_answer
 from src.tasks.nightly_cleanup import run as nightly_run
 from src.tasks.sync_things import run as sync_run
-from src.app.services.sample_service import compute_answer
 
 
 def test_nightly_cleanup_run():

@@ -21,11 +21,12 @@ EventBridge Rule (UTC) ───► Lambda: nightlyCleanupUtc
 ```
 serverless-fastapi-scheduler-template/
 ├─ serverless.yml
-├─ requirements.txt           # Production dependencies
-├─ requirements-dev.txt       # Development dependencies
+├─ pyproject.toml             # Project configuration & dependencies
+├─ uv.lock                    # Locked dependencies (auto-generated)
+├─ Makefile                   # Development shortcuts
 ├─ README.md
 ├─ .env.example
-├─ Makefile
+├─ .python-version
 ├─ package.json
 ├─ src/
 │  ├─ app/...
@@ -37,16 +38,20 @@ serverless-fastapi-scheduler-template/
 
 ## Requirements
 - Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (modern Python package manager)
 - Node.js 18+
 - AWS credentials with permissions
 
 ## Quickstart
 ```bash
-# Create virtual environment
-python3 -m venv .venv && source .venv/bin/activate
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies
-pip install -r requirements-dev.txt
+# Install all dependencies (creates venv automatically)
+make install
+
+# Or manually:
+uv sync
 npm install
 ```
 
@@ -54,16 +59,12 @@ npm install
 
 ### Development Stage
 ```bash
-npm run deploy:dev
-# or
-serverless deploy --stage dev
+make deploy-dev
 ```
 
 ### Production Stage
 ```bash
-npm run deploy:prod
-# or
-serverless deploy --stage prod
+make deploy-prod
 ```
 
 ### Stage-specific Configuration
@@ -72,20 +73,20 @@ serverless deploy --stage prod
 
 ### Teardown
 ```bash
-npm run remove:dev   # Remove dev stage
-npm run remove:prod  # Remove prod stage
+make remove-dev   # Remove dev stage
+make remove-prod  # Remove prod stage
 ```
 
 ### View Deployment Info
 ```bash
-npm run info:dev
-npm run info:prod
+make info-dev
+make info-prod
 ```
 
 ### View Logs
 ```bash
-npm run logs:api:dev
-npm run logs:api:prod
+make logs-api-dev
+make logs-api-prod
 ```
 
 ## Configuration & Secrets
@@ -95,18 +96,33 @@ npm run logs:api:prod
 
 ## Testing & Quality
 ```bash
-pytest
-ruff check .
-black --check .
-mypy src
+# Run tests
+make test
+
+# Lint code
+make lint
+
+# Auto-fix lint issues
+make lint-fix
+
+# Format code
+make format
+
+# Type check
+make typecheck
+
+# Run local dev server
+make run
 ```
+
+All commands use `uv` under the hood. See `Makefile` for details.
 
 ## CI/CD
 - **CI**: lint, type-check, tests on push/PR to `main`
 - **Deploy**: manual dispatch with `stage` and `region` inputs; set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in repo secrets
 
 ## Contributing
-Issues and PRs are welcome. Run `make lint`, `make typecheck`, `make test` before submitting.
+Issues and PRs are welcome. Run `make lint`, `make typecheck`, and `make test` before submitting.
 
 ## License
 MIT
