@@ -3,7 +3,7 @@
 FastAPI on **AWS Lambda** using **Serverless Framework v4**, with:
 - **HTTP API** via API Gateway + **Mangum**
 - **EventBridge Rule (UTC)** scheduling
-- **Offline emulation** with `serverless-offline`
+- **Stage-based deployment** (dev/prod) with optimized packaging
 - Tests (pytest + httpx), typing, linting
 - CI/CD with GitHub Actions
 - Function-level DLQs (SQS) via `AWS::Lambda::EventInvokeConfig`
@@ -21,7 +21,8 @@ EventBridge Rule (UTC) ───► Lambda: nightlyCleanupUtc
 ```
 serverless-fastapi-scheduler-template/
 ├─ serverless.yml
-├─ pyproject.toml
+├─ requirements.txt           # Production dependencies
+├─ requirements-dev.txt       # Development dependencies
 ├─ README.md
 ├─ .env.example
 ├─ Makefile
@@ -41,44 +42,56 @@ serverless-fastapi-scheduler-template/
 
 ## Quickstart
 ```bash
+# Create virtual environment
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]" & npm install
-```
 
-## Offline Emulation (serverless-offline)
-Run API + scheduled functions locally with **serverless-offline**.
-
-### Start
-```bash
-sls offline start
-```
-
-### Pause automatic schedules
-Schedules use:
-```yaml
-enabled: ${env:ENABLE_SCHEDULES, 'true'}
-```
-Disable them locally:
-```bash
-ENABLE_SCHEDULES=false sls offline start
-```
-
-### Manual triggers
-```bash
-sls invoke local -f nightlyCleanupUtc
-sls invoke local -f syncThingsUtc
+# Install dependencies
+pip install -r requirements-dev.txt
+npm install
 ```
 
 ## Deploying
+
+### Development Stage
 ```bash
-npm run sls -- deploy --stage dev
-# teardown
-npm run sls -- remove --stage dev
+npm run deploy:dev
+# or
+serverless deploy --stage dev
+```
+
+### Production Stage
+```bash
+npm run deploy:prod
+# or
+serverless deploy --stage prod
+```
+
+### Stage-specific Configuration
+- **Dev**: 512MB memory, 7-day logs, schedules **disabled**
+- **Prod**: 1024MB memory, 30-day logs, schedules **enabled**
+
+### Teardown
+```bash
+npm run remove:dev   # Remove dev stage
+npm run remove:prod  # Remove prod stage
+```
+
+### View Deployment Info
+```bash
+npm run info:dev
+npm run info:prod
+```
+
+### View Logs
+```bash
+npm run logs:api:dev
+npm run logs:api:prod
 ```
 
 ## Configuration & Secrets
-- `STAGE`, `API_BASE_PATH`, `ROOT_PATH`, `ENABLE_SCHEDULES`
-- Store secrets in **SSM Parameter Store** or **AWS Secrets Manager** and reference in `serverless.yml`.
+- `STAGE`, `API_BASE_PATH`, `ROOT_PATH`
+- Store secrets in **SSM Parameter Store** or **AWS Secrets Manager** and reference in `serverless.yml`
+- Schedules are automatically managed per stage (disabled in dev, enabled in prod)
 
 ## Testing & Quality
 ```bash

@@ -7,9 +7,9 @@ provider:
   architecture: arm64
   region: ${env:AWS_REGION, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
-  memorySize: 512
+  memorySize: ${self:custom.stages.${self:provider.stage}.memorySize, 512}
   timeout: 15
-  logRetentionInDays: 14
+  logRetentionInDays: ${self:custom.stages.${self:provider.stage}.logRetentionInDays, 14}
   environment:
     STAGE: ${self:provider.stage}
     API_BASE_PATH: ${env:API_BASE_PATH, ''}
@@ -25,7 +25,7 @@ provider:
           Resource: "*"
 
 package:
-  individually: true
+  individually: false
   patterns:
     - '!tests/**'
     - '!**/__pycache__/**'
@@ -33,29 +33,33 @@ package:
     - '!node_modules/**'
     - '!package.json'
     - '!package-lock.json'
-
-plugins:
-  - serverless-python-requirements
-  - serverless-offline
+    - '!.venv/**'
+    - '!.git/**'
+    - '!.github/**'
+    - '!.serverless/**'
+    - '!.pytest_cache/**'
+    - '!.ruff_cache/**'
+    - '!.mypy_cache/**'
+    - '!*.md'
+    - '!.env*'
+    - '!Makefile'
+    - '!pyproject.toml'
+    - '!requirements-dev.txt'
 
 custom:
-  serverless-offline:
-    httpPort: 3000
-    lambdaPort: 3002
-  pythonRequirements:
-    slim: true
-    strip: false
-    useStaticCache: true
-    useDownloadCache: true
-    dockerizePip: true
+  stages:
+    dev:
+      memorySize: 512
+      logRetentionInDays: 7
+      schedulesEnabled: false
+    prod:
+      memorySize: 1024
+      logRetentionInDays: 30
+      schedulesEnabled: true
 
 functions:
   api:
     handler: src/handlers/http_handler.handler
-    package:
-      patterns:
-        - 'src/**'
-        - '!src/tasks/**'
     events:
       - httpApi:
           method: ANY
@@ -64,26 +68,18 @@ functions:
   nightlyCleanupUtc:
     handler: src/handlers/task_handlers.nightly_handler_utc
     description: Nightly cleanup at 02:00 UTC
-    package:
-      patterns:
-        - 'src/**'
-        - '!src/app/**'
     events:
       - schedule:
           rate: cron(0 2 * * ? *)
-          enabled: ${env:ENABLE_SCHEDULES, 'true'}
+          enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
 
   syncThingsUtc:
     handler: src/handlers/task_handlers.sync_handler_utc
     description: Sync every 1 minutes
-    package:
-      patterns:
-        - 'src/**'
-        - '!src/app/**'
     events:
       - schedule:
-          rate: rate(1 minutes)
-          enabled: ${env:ENABLE_SCHEDULES, 'true'}
+          rate: rate(1 minute)
+          enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
 
 resources:
   Resources:
