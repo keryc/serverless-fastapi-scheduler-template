@@ -23,6 +23,12 @@ provider:
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "*"
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - !GetAtt NightlyCleanupUtcDlq.Arn
+            - !GetAtt SyncThingsUtcDlq.Arn
 
 package:
   individually: false
@@ -97,7 +103,7 @@ resources:
     NightlyCleanupUtcInvokeConfig:
       Type: AWS::Lambda::EventInvokeConfig
       Properties:
-        FunctionName: !Sub "${self:service}-${self:provider.stage}-nightlyCleanupUtc"
+        FunctionName: !Ref NightlyCleanupUtcLambdaFunction
         Qualifier: "$LATEST"
         MaximumRetryAttempts: 2
         DestinationConfig:
@@ -107,7 +113,7 @@ resources:
     SyncThingsUtcInvokeConfig:
       Type: AWS::Lambda::EventInvokeConfig
       Properties:
-        FunctionName: !Sub "${self:service}-${self:provider.stage}-syncThingsUtc"
+        FunctionName: !Ref SyncThingsUtcLambdaFunction
         Qualifier: "$LATEST"
         MaximumRetryAttempts: 2
         DestinationConfig:

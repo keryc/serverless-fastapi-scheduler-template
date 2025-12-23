@@ -43,7 +43,7 @@ serverless-fastapi-scheduler-template/
 ## Quickstart
 ```bash
 # Create virtual environment
-python -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 
 # Install dependencies
 pip install -r requirements-dev.txt
