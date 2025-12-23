@@ -1,8 +1,10 @@
 import os
+
 from fastapi import FastAPI
+
 from .api.v1.health import router as health_router
-from .core.logging import configure_logging
 from .core.config import settings
+from .core.logging import configure_logging
 
 configure_logging()
 

@@ -1,21 +1,65 @@
-.PHONY: install lint format typecheck test run deploy remove offline
+.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod
 
 install:
-	python -m pip install --upgrade pip
-	pip install -e ".[dev]"
-	npm ci
+	@command -v uv >/dev/null 2>&1 || { echo "❌ uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
+	uv sync
+	npm install
+
+sync:
+	uv sync
 
 lint:
-	ruff check .
+	uv run ruff check .
+
+lint-fix:
+	uv run ruff check . --fix
 
 format:
-	black .
+	uv run black .
+
+format-check:
+	uv run black --check .
 
 typecheck:
-	mypy src
+	uv run mypy src
 
 test:
-	pytest -q
+	uv run pytest
+
+test-v:
+	uv run pytest -v
 
 run:
-	uvicorn src.app.main:app --reload
+	uv run uvicorn src.app.main:app --reload
+
+deploy-dev:
+	npm run deploy:dev
+
+deploy-prod:
+	npm run deploy:prod
+
+remove-dev:
+	npm run remove:dev
+
+remove-prod:
+	npm run remove:prod
+
+info-dev:
+	npm run info:dev
+
+info-prod:
+	npm run info:prod
+
+logs-api-dev:
+	npm run logs:api:dev
+
+logs-api-prod:
+	npm run logs:api:prod
+
+clean:
+	rm -rf .venv
+	rm -rf .pytest_cache
+	rm -rf .ruff_cache
+	rm -rf .mypy_cache
+	rm -rf **/__pycache__
+	rm -rf .serverless

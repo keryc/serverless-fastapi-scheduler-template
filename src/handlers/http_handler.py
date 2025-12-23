@@ -1,5 +1,7 @@
 import os
+
 from mangum import Mangum
+
 from src.app.main import app
 
 api_base_path = os.getenv("API_BASE_PATH") or ""

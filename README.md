@@ -3,7 +3,7 @@
 FastAPI on **AWS Lambda** using **Serverless Framework v4**, with:
 - **HTTP API** via API Gateway + **Mangum**
 - **EventBridge Rule (UTC)** scheduling
-- **Offline emulation** with `serverless-offline`
+- **Stage-based deployment** (dev/prod) with optimized packaging
 - Tests (pytest + httpx), typing, linting
 - CI/CD with GitHub Actions
 - Function-level DLQs (SQS) via `AWS::Lambda::EventInvokeConfig`
@@ -21,10 +21,12 @@ EventBridge Rule (UTC) ───► Lambda: nightlyCleanupUtc
 ```
 serverless-fastapi-scheduler-template/
 ├─ serverless.yml
-├─ pyproject.toml
+├─ pyproject.toml             # Project configuration & dependencies
+├─ uv.lock                    # Locked dependencies (auto-generated)
+├─ Makefile                   # Development shortcuts
 ├─ README.md
 ├─ .env.example
-├─ Makefile
+├─ .python-version
 ├─ package.json
 ├─ src/
 │  ├─ app/...
@@ -36,64 +38,91 @@ serverless-fastapi-scheduler-template/
 
 ## Requirements
 - Python 3.11+
+- [uv](https://docs.astral.sh/uv/) (modern Python package manager)
 - Node.js 18+
 - AWS credentials with permissions
 
 ## Quickstart
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]" & npm install
-```
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-## Offline Emulation (serverless-offline)
-Run API + scheduled functions locally with **serverless-offline**.
+# Install all dependencies (creates venv automatically)
+make install
 
-### Start
-```bash
-sls offline start
-```
-
-### Pause automatic schedules
-Schedules use:
-```yaml
-enabled: ${env:ENABLE_SCHEDULES, 'true'}
-```
-Disable them locally:
-```bash
-ENABLE_SCHEDULES=false sls offline start
-```
-
-### Manual triggers
-```bash
-sls invoke local -f nightlyCleanupUtc
-sls invoke local -f syncThingsUtc
+# Or manually:
+uv sync
+npm install
 ```
 
 ## Deploying
+
+### Development Stage
 ```bash
-npm run sls -- deploy --stage dev
-# teardown
-npm run sls -- remove --stage dev
+make deploy-dev
+```
+
+### Production Stage
+```bash
+make deploy-prod
+```
+
+### Stage-specific Configuration
+- **Dev**: 512MB memory, 7-day logs, schedules **disabled**
+- **Prod**: 1024MB memory, 30-day logs, schedules **enabled**
+
+### Teardown
+```bash
+make remove-dev   # Remove dev stage
+make remove-prod  # Remove prod stage
+```
+
+### View Deployment Info
+```bash
+make info-dev
+make info-prod
+```
+
+### View Logs
+```bash
+make logs-api-dev
+make logs-api-prod
 ```
 
 ## Configuration & Secrets
-- `STAGE`, `API_BASE_PATH`, `ROOT_PATH`, `ENABLE_SCHEDULES`
-- Store secrets in **SSM Parameter Store** or **AWS Secrets Manager** and reference in `serverless.yml`.
+- `STAGE`, `API_BASE_PATH`, `ROOT_PATH`
+- Store secrets in **SSM Parameter Store** or **AWS Secrets Manager** and reference in `serverless.yml`
+- Schedules are automatically managed per stage (disabled in dev, enabled in prod)
 
 ## Testing & Quality
 ```bash
-pytest
-ruff check .
-black --check .
-mypy src
+# Run tests
+make test
+
+# Lint code
+make lint
+
+# Auto-fix lint issues
+make lint-fix
+
+# Format code
+make format
+
+# Type check
+make typecheck
+
+# Run local dev server
+make run
 ```
+
+All commands use `uv` under the hood. See `Makefile` for details.
 
 ## CI/CD
 - **CI**: lint, type-check, tests on push/PR to `main`
 - **Deploy**: manual dispatch with `stage` and `region` inputs; set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in repo secrets
 
 ## Contributing
-Issues and PRs are welcome. Run `make lint`, `make typecheck`, `make test` before submitting.
+Issues and PRs are welcome. Run `make lint`, `make typecheck`, and `make test` before submitting.
 
 ## License
 MIT
