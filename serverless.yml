@@ -54,6 +54,10 @@ package:
     - '!Makefile'
 
 custom:
+  pythonRequirements:
+    useUv: false
+    dockerizePip: true
+    installer: uv
   stages:
     dev:
       memorySize: 512

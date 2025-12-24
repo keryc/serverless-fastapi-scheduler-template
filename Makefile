@@ -1,4 +1,4 @@
-.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod
+.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod invoke-research logs-research
 
 install:
 	@command -v uv >/dev/null 2>&1 || { echo "❌ uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
@@ -33,9 +33,11 @@ run:
 	uv run uvicorn src.app.main:app --reload
 
 deploy-dev:
+	uv export --no-dev --no-emit-project --frozen > requirements.txt
 	npm run deploy:dev
 
 deploy-prod:
+	uv export --no-dev --no-emit-project --frozen > requirements.txt
 	npm run deploy:prod
 
 remove-dev:
@@ -57,9 +59,18 @@ logs-api-prod:
 	npm run logs:api:prod
 
 clean:
+	rm -rf .pytest_cache
+	rm -rf .ruff_cache
+	rm -rf .mypy_cache
+	rm -rf **/__pycache__
+	rm -rf .serverless
+	sls requirements cleanCache
+
+full-clean:
 	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache
 	rm -rf .mypy_cache
 	rm -rf **/__pycache__
 	rm -rf .serverless
+	sls requirements cleanCache
