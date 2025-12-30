@@ -4,7 +4,7 @@
   "private": true,
   "description": "FastAPI on AWS Lambda with Serverless v4, EventBridge Rule scheduling (UTC), stage-based deployment (dev/prod), tests, CI/CD.",
   "devDependencies": {
-    "serverless": "4.19.1"
+    "serverless": "4.29.0"
   },
   "engines": {
     "node": ">=18"

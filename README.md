@@ -44,16 +44,16 @@ serverless-fastapi-scheduler-template/
 
 ## Quickstart
 ```bash
-# Install uv (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install all dependencies (creates venv automatically)
-make install
-
-# Or manually:
-uv sync
+# Install dependencies
 npm install
+
+# Run tests
+make test
+
+# Start local dev server
+make run
 ```
+
 
 ## Deploying
 
