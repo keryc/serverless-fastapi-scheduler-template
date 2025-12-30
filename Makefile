@@ -1,4 +1,4 @@
-.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod invoke-research logs-research
+.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod invoke-nightly-dev invoke-sync-dev
 
 install:
 	@command -v uv >/dev/null 2>&1 || { echo "❌ uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
@@ -74,3 +74,9 @@ full-clean:
 	rm -rf **/__pycache__
 	rm -rf .serverless
 	sls requirements cleanCache
+
+invoke-nightly-dev:
+	npx sls invoke -f nightlyCleanupUtc --stage dev
+
+invoke-sync-dev:
+	npx sls invoke -f syncThingsUtc --stage dev
