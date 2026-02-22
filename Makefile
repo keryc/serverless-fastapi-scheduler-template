@@ -59,14 +59,6 @@ logs-api-prod:
 	npm run logs:api:prod
 
 clean:
-	rm -rf .pytest_cache
-	rm -rf .ruff_cache
-	rm -rf .mypy_cache
-	rm -rf **/__pycache__
-	rm -rf .serverless
-	sls requirements cleanCache
-
-full-clean:
 	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache

@@ -539,7 +539,7 @@ wheels = [
 
 [[package]]
 name = "serverless-fastapi-scheduler-template"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
@@ -550,7 +550,7 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-dev = [
+test = [
     { name = "black" },
     { name = "mypy" },
     { name = "pytest" },
@@ -569,7 +569,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
+test = [
     { name = "black", specifier = ">=24.8" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8.2" },

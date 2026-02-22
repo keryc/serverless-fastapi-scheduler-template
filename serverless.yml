@@ -8,7 +8,7 @@ provider:
   region: ${env:AWS_REGION, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
   memorySize: ${self:custom.stages.${self:provider.stage}.memorySize, 512}
-  timeout: 15
+  timeout: ${self:custom.stages.${self:provider.stage}.timeout, 29}
   logRetentionInDays: ${self:custom.stages.${self:provider.stage}.logRetentionInDays, 14}
   environment:
     STAGE: ${self:provider.stage}
