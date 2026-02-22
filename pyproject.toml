@@ -13,12 +13,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = [
-    "pytest>=8.2",
-    "pytest-asyncio>=0.23",
+dev = [
     "ruff>=0.6",
     "black>=24.8",
     "mypy>=1.11",
+]
+test = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
     "types-requests",
 ]
 
