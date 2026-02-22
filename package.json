@@ -1,22 +1,22 @@
 {
   "name": "serverless-fastapi-scheduler-template",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "private": true,
   "description": "FastAPI on AWS Lambda with Serverless v4, EventBridge Rule scheduling (UTC), stage-based deployment (dev/prod), tests, CI/CD.",
   "devDependencies": {
-    "serverless": "4.29.0"
+    "serverless": "4.33.0"
   },
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "deploy:dev": "serverless deploy --stage dev",
-    "deploy:prod": "serverless deploy --stage prod",
-    "remove:dev": "serverless remove --stage dev",
-    "remove:prod": "serverless remove --stage prod",
-    "info:dev": "serverless info --stage dev",
-    "info:prod": "serverless info --stage prod",
-    "logs:api:dev": "serverless logs --function api --stage dev",
-    "logs:api:prod": "serverless logs --function api --stage prod"
+    "deploy:dev": "SLS_AWS_SDK=3 serverless deploy --stage dev",
+    "deploy:prod": "SLS_AWS_SDK=3 serverless deploy --stage prod",
+    "remove:dev": "SLS_AWS_SDK=3 serverless remove --stage dev",
+    "remove:prod": "SLS_AWS_SDK=3 serverless remove --stage prod",
+    "info:dev": "SLS_AWS_SDK=3 serverless info --stage dev",
+    "info:prod": "SLS_AWS_SDK=3 serverless info --stage prod",
+    "logs:api:dev": "SLS_AWS_SDK=3 serverless logs --function api --stage dev",
+    "logs:api:prod": "SLS_AWS_SDK=3 serverless logs --function api --stage prod"
   }
 }

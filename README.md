@@ -45,7 +45,7 @@ serverless-fastapi-scheduler-template/
 ## Quickstart
 ```bash
 # Install dependencies
-npm install
+make install
 
 # Run tests
 make test

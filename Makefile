@@ -2,11 +2,11 @@
 
 install:
 	@command -v uv >/dev/null 2>&1 || { echo "❌ uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
-	uv sync
+	uv sync --group dev --group test
 	npm install
 
 sync:
-	uv sync
+	uv sync --group dev --group test
 
 lint:
 	uv run ruff check .
@@ -59,14 +59,6 @@ logs-api-prod:
 	npm run logs:api:prod
 
 clean:
-	rm -rf .pytest_cache
-	rm -rf .ruff_cache
-	rm -rf .mypy_cache
-	rm -rf **/__pycache__
-	rm -rf .serverless
-	sls requirements cleanCache
-
-full-clean:
 	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache
