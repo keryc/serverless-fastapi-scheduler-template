@@ -1,5 +1,5 @@
 .PHONY: install sync lint lint-fix format format-check typecheck test test-v run \
-        deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod \
+        check verify deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod \
         invoke logs clean full-clean
 
 # Shared variables for the invoke/logs targets.
@@ -40,6 +40,14 @@ test:
 
 test-v:
 	uv run pytest -v
+
+# Full local gate: auto-fix first, then verify everything.
+check: lint-fix format lint format-check typecheck test
+	@echo "✅ lint, format, typecheck and tests passed"
+
+# Same checks without touching files — what CI should run.
+verify: lint format-check typecheck test
+	@echo "✅ lint, format, typecheck and tests passed"
 
 # ==================== Local Dev ====================
 run:
