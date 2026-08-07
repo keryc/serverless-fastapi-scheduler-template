@@ -96,6 +96,10 @@ make info-prod
 
 ### View Logs
 ```bash
+make logs-api-dev
+make logs-api-prod
+
+# Or tail any function, including the scheduled tasks:
 make logs TASK=api                      # STAGE defaults to dev
 make logs TASK=sync-things STAGE=prod
 ```

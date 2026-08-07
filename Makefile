@@ -1,6 +1,6 @@
 .PHONY: install sync lint lint-fix format format-check typecheck test test-v run \
         check verify deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod \
-        invoke logs clean full-clean
+        invoke invoke-nightly-dev invoke-sync-dev logs logs-api-dev logs-api-prod clean
 
 # Shared variables for the invoke/logs targets.
 #   STAGE  dev | prod                  (default: dev)
@@ -94,6 +94,12 @@ else
 	@echo "Unknown TASK: $(TASK). Options: nightly-cleanup, sync-things"; exit 1
 endif
 
+invoke-nightly-dev:
+	npx sls invoke -f nightlyCleanupUtc --stage dev
+
+invoke-sync-dev:
+	npx sls invoke -f syncThingsUtc --stage dev
+
 # ==================== Logs ====================
 # Usage: make logs TASK=api STAGE=dev
 logs:
@@ -107,15 +113,18 @@ else
 	@echo "Unknown TASK: $(TASK). Options: api, nightly-cleanup, sync-things"; exit 1
 endif
 
+logs-api-dev:
+	npm run logs:api:dev
+
+logs-api-prod:
+	npm run logs:api:prod
+
 # ==================== Cleanup ====================
-# clean: caches only. full-clean: also removes .venv and .serverless.
 clean:
+	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache
 	rm -rf .mypy_cache
 	rm -rf **/__pycache__
-
-full-clean: clean
-	rm -rf .venv
 	rm -rf .serverless
-	npx sls requirements cleanCache
+	sls requirements cleanCache
