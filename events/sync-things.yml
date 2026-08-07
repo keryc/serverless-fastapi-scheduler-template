@@ -1,0 +1,15 @@
+# Schedules for the sync-things task.
+# Two rules, one Lambda: each passes a different `input` payload, which the
+# task reads from `config.params`.
+events:
+  - schedule:
+      rate: rate(1 minute)
+      enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
+      input:
+        region: us-east-1
+
+  - schedule:
+      rate: cron(0 * * * ? *) # hourly
+      enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
+      input:
+        region: eu-west-1

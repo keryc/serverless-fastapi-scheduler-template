@@ -1,4 +1,15 @@
-.PHONY: install sync lint format typecheck test run deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod invoke-nightly-dev invoke-sync-dev
+.PHONY: install sync lint lint-fix format format-check typecheck test test-v run \
+        deploy-dev deploy-prod remove-dev remove-prod info-dev info-prod \
+        invoke logs clean full-clean
+
+# Shared variables for the invoke/logs targets.
+#   STAGE  dev | prod                  (default: dev)
+#   TASK   api | nightly-cleanup | sync-things
+SERVICE := serverless-fastapi-scheduler-template
+STAGE ?= dev
+TASK ?= api
+
+# ==================== Setup ====================
 
 install:
 	@command -v uv >/dev/null 2>&1 || { echo "❌ uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"; exit 1; }
@@ -8,6 +19,7 @@ install:
 sync:
 	uv sync --group dev --group test
 
+# ==================== Quality ====================
 lint:
 	uv run ruff check .
 
@@ -29,9 +41,11 @@ test:
 test-v:
 	uv run pytest -v
 
+# ==================== Local Dev ====================
 run:
 	uv run uvicorn src.app.main:app --reload
 
+# ==================== Deploy ====================
 deploy-dev:
 	uv export --no-dev --no-emit-project --frozen > requirements.txt
 	npm run deploy:dev
@@ -52,23 +66,48 @@ info-dev:
 info-prod:
 	npm run info:prod
 
-logs-api-dev:
-	npm run logs:api:dev
+# ==================== Invoke tasks (async) ====================
+# Usage:
+#   make invoke TASK=nightly-cleanup
+#   make invoke TASK=sync-things STAGE=prod PAYLOAD='{"region":"eu-west-1"}'
+PAYLOAD ?= {}
+LAMBDA_PREFIX := $(SERVICE)-$(STAGE)
 
-logs-api-prod:
-	npm run logs:api:prod
+invoke:
+ifeq ($(TASK),nightly-cleanup)
+	aws lambda invoke --no-cli-pager --function-name $(LAMBDA_PREFIX)-nightlyCleanupUtc \
+		--invocation-type Event --cli-binary-format raw-in-base64-out \
+		--payload '$(PAYLOAD)' /dev/null
+else ifeq ($(TASK),sync-things)
+	aws lambda invoke --no-cli-pager --function-name $(LAMBDA_PREFIX)-syncThingsUtc \
+		--invocation-type Event --cli-binary-format raw-in-base64-out \
+		--payload '$(PAYLOAD)' /dev/null
+else
+	@echo "Unknown TASK: $(TASK). Options: nightly-cleanup, sync-things"; exit 1
+endif
 
+# ==================== Logs ====================
+# Usage: make logs TASK=api STAGE=dev
+logs:
+ifeq ($(TASK),api)
+	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-api --follow
+else ifeq ($(TASK),nightly-cleanup)
+	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-nightlyCleanupUtc --follow
+else ifeq ($(TASK),sync-things)
+	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-syncThingsUtc --follow
+else
+	@echo "Unknown TASK: $(TASK). Options: api, nightly-cleanup, sync-things"; exit 1
+endif
+
+# ==================== Cleanup ====================
+# clean: caches only. full-clean: also removes .venv and .serverless.
 clean:
-	rm -rf .venv
 	rm -rf .pytest_cache
 	rm -rf .ruff_cache
 	rm -rf .mypy_cache
 	rm -rf **/__pycache__
+
+full-clean: clean
+	rm -rf .venv
 	rm -rf .serverless
-	sls requirements cleanCache
-
-invoke-nightly-dev:
-	npx sls invoke -f nightlyCleanupUtc --stage dev
-
-invoke-sync-dev:
-	npx sls invoke -f syncThingsUtc --stage dev
+	npx sls requirements cleanCache

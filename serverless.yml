@@ -14,6 +14,7 @@ provider:
     STAGE: ${self:provider.stage}
     API_BASE_PATH: ${env:API_BASE_PATH, ''}
     ROOT_PATH: ${env:ROOT_PATH, ''}
+    API_BEARER_TOKEN: ${env:API_BEARER_TOKEN, ''}
   iam:
     role:
       statements:
@@ -34,6 +35,7 @@ package:
   individually: false
   patterns:
     - '!tests/**'
+    - '!events/**'
     - '!**/__pycache__/**'
     - '!**/*.pyc'
     - '!node_modules/**'
@@ -61,10 +63,14 @@ custom:
   stages:
     dev:
       memorySize: 512
+      timeout: 29
+      taskTimeout: 300
       logRetentionInDays: 7
       schedulesEnabled: false
     prod:
       memorySize: 1024
+      timeout: 29
+      taskTimeout: 300
       logRetentionInDays: 30
       schedulesEnabled: true
 
@@ -76,21 +82,23 @@ functions:
           method: ANY
           path: /{proxy+}
 
+  # Scheduled tasks: one shared handler, TASK_ID picks the task from the
+  # registry, and each schedule's `input` becomes the task parameters.
   nightlyCleanupUtc:
-    handler: src/handlers/task_handlers.nightly_handler_utc
+    handler: src/handlers/task_handlers.task_handler
     description: Nightly cleanup at 02:00 UTC
-    events:
-      - schedule:
-          rate: cron(0 2 * * ? *)
-          enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
+    timeout: ${self:custom.stages.${self:provider.stage}.taskTimeout}
+    environment:
+      TASK_ID: nightly-cleanup
+    events: ${file(./events/nightly-cleanup.yml):events}
 
   syncThingsUtc:
-    handler: src/handlers/task_handlers.sync_handler_utc
-    description: Sync every 1 minutes
-    events:
-      - schedule:
-          rate: rate(1 minute)
-          enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
+    handler: src/handlers/task_handlers.task_handler
+    description: Sync things on a schedule
+    timeout: ${self:custom.stages.${self:provider.stage}.taskTimeout}
+    environment:
+      TASK_ID: sync-things
+    events: ${file(./events/sync-things.yml):events}
 
 resources:
   Resources:
@@ -125,3 +133,8 @@ resources:
         DestinationConfig:
           OnFailure:
             Destination: !GetAtt SyncThingsUtcDlq.Arn
+
+  Outputs:
+    ApiEndpoint:
+      Description: HTTP API endpoint URL
+      Value: !Sub "https://${HttpApi}.execute-api.${self:provider.region}.amazonaws.com"
