@@ -167,8 +167,15 @@ read the outcome with `make logs TASK=...`.
        TASK_ID: my-task
      events: ${file(./events/my-task.yml):events}
    ```
+4. Add it to `TASK_MAP` in the `Makefile` so `make invoke`/`make logs` know it:
+   ```make
+   TASK_MAP := nightly-cleanup:nightlyCleanupUtc sync-things:syncThingsUtc my-task:myTask
+   ```
 
-Tasks are auto-discovered from `src/tasks/`, so no registration list to update.
+Tasks are auto-discovered from `src/tasks/`, so there is no registration list to
+update. `tests/integration/test_serverless_config.py` cross-checks all four
+places and fails if they drift apart — a `TASK_ID` with no task, an unreferenced
+`events/` file, or a stale `TASK_MAP`.
 
 ### Retries
 
@@ -183,8 +190,26 @@ base_delay_seconds=...)`, and keep the worst case below the function `timeout`.
 - Settings load from the environment and, locally, from a `.env` file (see `.env.example`)
 - `API_BEARER_TOKEN` protects endpoints that depend on `verify_token`
   (`GET /api/v1/tasks` is the included example); when unset those endpoints return 503
-- Store secrets in **SSM Parameter Store** or **AWS Secrets Manager** and reference in `serverless.yml`
-- Schedules are automatically managed per stage (disabled in dev, enabled in prod)
+- Schedules are managed per stage through `custom.stages.<stage>.schedulesEnabled`
+  in `serverless.yml` (disabled in dev, enabled in prod), not through `.env`
+
+### Secrets in production
+
+`API_BEARER_TOKEN` is passed as a plain Lambda environment variable, readable by
+anyone holding `lambda:GetFunctionConfiguration`. That is fine for dev; for prod
+keep it in **SSM Parameter Store** (or Secrets Manager) and reference it from
+`serverless.yml` instead:
+
+```yaml
+API_BEARER_TOKEN: ${ssm:/${self:service}/${self:provider.stage}/api-bearer-token}
+```
+
+Create it once with:
+
+```bash
+aws ssm put-parameter --name /<service>/prod/api-bearer-token \
+  --type SecureString --value "$(openssl rand -hex 32)"
+```
 
 ## Testing & Quality
 ```bash
