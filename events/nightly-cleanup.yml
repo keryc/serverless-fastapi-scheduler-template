@@ -1,0 +1,9 @@
+# Schedules for the nightly-cleanup task.
+# Add an entry here to run the same Lambda again with different parameters —
+# no changes needed in serverless.yml.
+events:
+  - schedule:
+      rate: cron(0 2 * * ? *) # 02:00 UTC daily
+      enabled: ${self:custom.stages.${self:provider.stage}.schedulesEnabled}
+      input:
+        scope: all

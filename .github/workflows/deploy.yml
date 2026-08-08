@@ -30,6 +30,10 @@ jobs:
         run: |
           npm ci
           uv sync --frozen --no-dev
+      # Same export the deploy-dev/deploy-prod Makefile targets run, so the
+      # Lambda layer is built from the lockfile instead of a stale committed file.
+      - name: Export requirements.txt from uv.lock
+        run: uv export --no-dev --no-emit-project --frozen > requirements.txt
       - name: Deploy
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
