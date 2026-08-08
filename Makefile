@@ -3,11 +3,24 @@
         invoke invoke-nightly-dev invoke-sync-dev logs logs-api-dev logs-api-prod clean
 
 # Shared variables for the invoke/logs targets.
-#   STAGE  dev | prod                  (default: dev)
-#   TASK   api | nightly-cleanup | sync-things
-SERVICE := serverless-fastapi-scheduler-template
+#   STAGE  dev | prod                     (default: dev)
+#   TASK   api or any id in TASK_MAP      (default: api)
+#
+# SERVICE is read from serverless.yml so renaming the service in one place is
+# enough. TASK_MAP is the single place mapping a task id to its function name;
+# add one entry per task and both `invoke` and `logs` pick it up.
+SERVICE := $(shell sed -n 's/^service:[[:space:]]*//p' serverless.yml | head -1)
+TASK_MAP := nightly-cleanup:nightlyCleanupUtc sync-things:syncThingsUtc
+
 STAGE ?= dev
 TASK ?= api
+PAYLOAD ?= {}
+
+LAMBDA_PREFIX = $(SERVICE)-$(STAGE)
+TASK_IDS = $(foreach e,$(TASK_MAP),$(firstword $(subst :, ,$(e))))
+# Function name for $(TASK); empty when TASK is not in TASK_MAP.
+TASK_FUNCTION = $(strip $(foreach e,$(TASK_MAP),\
+    $(if $(filter $(TASK),$(firstword $(subst :, ,$(e)))),$(lastword $(subst :, ,$(e))))))
 
 # ==================== Setup ====================
 
@@ -78,21 +91,13 @@ info-prod:
 # Usage:
 #   make invoke TASK=nightly-cleanup
 #   make invoke TASK=sync-things STAGE=prod PAYLOAD='{"region":"eu-west-1"}'
-PAYLOAD ?= {}
-LAMBDA_PREFIX := $(SERVICE)-$(STAGE)
-
+# Async invocation: returns 202, read the outcome with `make logs TASK=...`.
 invoke:
-ifeq ($(TASK),nightly-cleanup)
-	aws lambda invoke --no-cli-pager --function-name $(LAMBDA_PREFIX)-nightlyCleanupUtc \
+	@test -n "$(SERVICE)" || { echo "❌ Could not read 'service:' from serverless.yml"; exit 1; }
+	@test -n "$(TASK_FUNCTION)" || { echo "❌ Unknown TASK '$(TASK)'. Options: $(TASK_IDS)"; exit 1; }
+	aws lambda invoke --no-cli-pager --function-name $(LAMBDA_PREFIX)-$(TASK_FUNCTION) \
 		--invocation-type Event --cli-binary-format raw-in-base64-out \
 		--payload '$(PAYLOAD)' /dev/null
-else ifeq ($(TASK),sync-things)
-	aws lambda invoke --no-cli-pager --function-name $(LAMBDA_PREFIX)-syncThingsUtc \
-		--invocation-type Event --cli-binary-format raw-in-base64-out \
-		--payload '$(PAYLOAD)' /dev/null
-else
-	@echo "Unknown TASK: $(TASK). Options: nightly-cleanup, sync-things"; exit 1
-endif
 
 invoke-nightly-dev:
 	npx sls invoke -f nightlyCleanupUtc --stage dev
@@ -102,16 +107,12 @@ invoke-sync-dev:
 
 # ==================== Logs ====================
 # Usage: make logs TASK=api STAGE=dev
+# TASK=api tails the HTTP function; any id in TASK_MAP tails that task.
 logs:
-ifeq ($(TASK),api)
-	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-api --follow
-else ifeq ($(TASK),nightly-cleanup)
-	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-nightlyCleanupUtc --follow
-else ifeq ($(TASK),sync-things)
-	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-syncThingsUtc --follow
-else
-	@echo "Unknown TASK: $(TASK). Options: api, nightly-cleanup, sync-things"; exit 1
-endif
+	@test -n "$(SERVICE)" || { echo "❌ Could not read 'service:' from serverless.yml"; exit 1; }
+	@test "$(TASK)" = "api" -o -n "$(TASK_FUNCTION)" || \
+		{ echo "❌ Unknown TASK '$(TASK)'. Options: api $(TASK_IDS)"; exit 1; }
+	aws logs tail /aws/lambda/$(LAMBDA_PREFIX)-$(if $(filter api,$(TASK)),api,$(TASK_FUNCTION)) --follow
 
 logs-api-dev:
 	npm run logs:api:dev

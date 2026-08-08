@@ -14,6 +14,10 @@ provider:
     STAGE: ${self:provider.stage}
     API_BASE_PATH: ${env:API_BASE_PATH, ''}
     ROOT_PATH: ${env:ROOT_PATH, ''}
+    # Plain env var: readable by anyone with lambda:GetFunctionConfiguration.
+    # For prod, store the token in SSM and reference it instead, e.g.:
+    #   API_BEARER_TOKEN: ${ssm:/${self:service}/${self:provider.stage}/api-bearer-token}
+    # Use ~true for a SecureString so Serverless decrypts it at deploy time.
     API_BEARER_TOKEN: ${env:API_BEARER_TOKEN, ''}
   iam:
     role:
